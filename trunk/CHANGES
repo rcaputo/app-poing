@@ -4,6 +4,15 @@
 This file lists poing's changes, most recent to oldest.
 
 -------------------------------------------------------------------------------
+2000.05.24 - Release 1.01
+-------------------------------------------------------------------------------
+
+poing was looking for modules that weren't needed.  These included
+Filter::HTTPD, which in turn wanted HTTP::Request, which wanted URI as
+well as LWP, which would import the world.  I took the unnecessary
+modules out.  Thanks to mstevens for finding this.
+
+-------------------------------------------------------------------------------
 2000.03.26 - Release 1.00
 -------------------------------------------------------------------------------
 

@@ -185,7 +185,7 @@ sub net_checksum {
 ###############################################################################
 
 package main;
-use POE qw(Wheel::ReadWrite Driver::SysRW Filter::HTTPD Wheel::SocketFactory);
+use POE;
 
 #------------------------------------------------------------------------------
 
