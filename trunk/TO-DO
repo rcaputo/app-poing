@@ -1,0 +1,22 @@
+# -*- mode: text; tab-stop-list: (2 4 6 8 10); indent-tabs-mode: t -*-
+# $Id$
+
+-------------------------------------------------------------------------------
+Things to do to poing.  Creatures to feep.  It's not a guarantee of
+future changes; it's more like notes kept so nobody forgets.
+
+If you'd like to see something not on this list, or you want to
+contribute a patch to complete one of the to-do items, please contact
+the author.  You can reach him as:
+
+  "Rocco Caputo" <troc+xws@netrus.net>.
+-------------------------------------------------------------------------------
+
+Make a real manpage.
+
+A 'web front end would be sexy.  Refresh the page whenever you want to
+see the latest stats.
+
+-------------------------------------------------------------------------------
+End of File
+-------------------------------------------------------------------------------

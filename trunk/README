@@ -1,0 +1,246 @@
+# -*- mode: text; tab-stop-list: (2 4 6 8 10); indent-tabs-mode: t -*-
+# $Id$
+
+-------------------------------------------------------------------------------
+TABLE OF CONTENTS
+-------------------------------------------------------------------------------
+
+What poing Is
+Requirements
+Compatibility
+Getting Up and Running
+Troubleshooting
+Author Contact and Copyright
+End of file
+
+-------------------------------------------------------------------------------
+WHAT POING IS
+-------------------------------------------------------------------------------
+
+Poing is a multi-host ping program with a "strip chart" style display.
+It not only lets you see hosts' current status, but it also shows at a
+glance how they've been responding over time.
+
+-------------------------------------------------------------------------------
+REQUIREMENTS
+-------------------------------------------------------------------------------
+
+Poing requires a terminal that supports ANSI or VT-100 cursor
+positioning and color sequences.  It doesn't have to honor the color
+sequences with actual color, but it should at least fail to display
+them.  The color's real sweet, though.
+
+Your shell should set environment variables that indicates the
+terminal's width and height.  Known variables are: COLS, COLUMNS, ROWS
+and LINES.  Poing will assume an 80x25 terminal if the environment
+variables aren't supplied.
+
+Poing requires Perl, version 5.004_04 or newer, and the following Perl
+modules, which are available from the CPAN:
+
+  POE
+  Time::HiRes
+
+You can download and install the modules the hardcore tarball way.
+Visit http://www.cpan.org/ to find a close CPAN mirror.
+
+They may be installed using the CPAN shell:
+
+  % perl -MCPAN -e shell
+
+If this is your first time using the CPAN shell, you'll be asked some
+questions about your system and the archive you'd like to use.  The
+CPAN shell will present you with a prompt once these first-time
+formalities are taken care of.
+
+Once at the "cpan>" prompt, you can type:
+
+  cpan> install POE
+  cpan> install Time::HiRes
+
+Each command should build, test, and (if the tests pass) install a
+module.  When they're done:
+
+  cpan> quit
+
+To return to your shell prompt.
+
+-------------------------------------------------------------------------------
+COMPATIBILITY
+-------------------------------------------------------------------------------
+
+Poing will run wherever POE does, which is a decent subset of
+supported Perl platforms.
+
+-------------------------------------------------------------------------------
+GETTING UP AND RUNNING
+-------------------------------------------------------------------------------
+
+Here's the quick walk-through for setting up and running poing.
+
+1. Inspect the program's source for trojans or other nastiness.  Since
+   the author runs poing daily, he's taken great pains to make sure it
+   contains only harmless code.  Prudent system administrators
+   understand that this is no guarantee that things will work on their
+   systems.
+
+2. Note the default parameters at the beginning of the program.  Note
+   the default host list at the end of the program.
+
+3. If the defaults are not to your liking, then create ~/.poingrc to
+   override them.  Here is an explanation of the available .poingrc
+   directives:
+
+   How to specify hosts to ping.
+
+      By numeric address.  Poing will try to resolve a host name from
+      the address.  The host name will be displayed if one is found,
+      otherwise the numeric address will show.
+
+	host <numeric address>
+
+      For example:
+
+	host 127.0.0.1
+
+      By host name.  Poing will display the host name and ping the
+      address, if one can be resolved.  Some host names may point to
+      several addresses, so this form of the host directive is sloppy
+      and not recommended.
+
+        host <host name>
+
+      For example:
+
+        host localhost
+
+      By numeric address and symbolic name.  This is the recommended
+      method, since it bypasses the start-up delay and vagarities of
+      the DNS.
+
+	host <numeric address> <symbolic name>
+
+      For example:
+
+        host 127.0.0.1 localhost
+
+   How to set the ping timeout.
+
+      To specify the ping timeout in seconds (fractions are okay):
+
+        ping_timeout <seconds>
+
+      Some examples:
+
+	ping_timeout 2     # This got the author in trouble
+	ping_timeout 3.14  # A nice round number
+	ping_timeout 10    # Relatively friendly
+
+   How to tell when hosts die.
+
+      Poing does some things when a host becomes unresponsive.  It
+      beeps to tell you something's wrong, and it dims the strip chart
+      for that host.
+
+      Poing determines host unresponsiveness tracking how long a host
+      hasn't responded to echo requests.  The amount of time a host
+      can be quiet before it's considered dead is specified with the
+      detect_host_death directive:
+
+	detect_host_death <seconds>
+
+      For example:
+
+        detect_host_death 30   # Quiet for half a minute == dead
+
+      Packets are lost all the time; especially low-priority packets
+      like ICMP ECHO-REQUEST.  Poing will interpret this normal
+      transient packet loss as host death if detect_host_death is set
+      too low.
+
+      The author's experimentation has determined that the greater of
+      three times the ping_timeout or 15 seconds is a good starting
+      value for detect_host_death.
+
+   How to tell when hosts come back from the dead.
+
+      The detect_host_life directive works like detect_host_death, but
+      it detects when dead hosts are back.  Generally, it should be
+      set to match the detect_host_death value.
+
+	detect_host_life <seconds>
+
+      For example:
+
+	detect_host_life 30   # It's been back for half a minute
+
+   How to log host deaths and resurrections.
+
+      Finally, the log directive will enable poing's logging facility
+      and tell it the file where it will record host status changes.
+      The file is tab delimited, with the following fields:
+
+	GMT date/time stamp
+	status message
+	numeric address
+	symbolic name
+
+      The status message will be one of these four strings:
+
+	begin = Poing has started.
+	cease = Poing has stopped.
+	up    = The host has come back to life.
+	down  = The host has been quiet.  Too quiet.
+
+      The "begin" and "cease" lines won't include a host address or
+      name.
+
+4. Run poing:
+
+   sudo poing.perl
+
+   Or run it with root privileges some other way.
+
+-------------------------------------------------------------------------------
+TROUBLESHOOTING
+-------------------------------------------------------------------------------
+
+Stuff happens.  Here's how to work through it and come out smelling
+like a rose.  Please let the author know if you encounter problems not
+listed here.
+
+
+You see the error "Can't locate [whatever] in @INC [yatta-yatta]".
+
+  Module [whatever] is not installed.  This can happen if it didn't
+  pass tests.  Try reinstalling the [whatever] module, and watch its
+  progress closely.
+
+
+icmp ping requires root privilege at [yatta-yatta] line [yatta-yatta].
+
+  Poing transmits ICMP ECHO packets, which require a raw socket.  Only
+  root can open a raw socket on your operating system.  This is your
+  cue to carefully examing poing.perl and decide whether you want it
+  to run as root.
+
+  Poing only opens one file, and it's opened read-only.  It doesn't do
+  anything else to your filesystem.  Don't take my word for it,
+  though; examine the program yourself for the utmost in warm-fuzzy
+  security.
+
+-------------------------------------------------------------------------------
+AUTHOR CONTACT AND COPYRIGHT
+-------------------------------------------------------------------------------
+
+Poing is Copyright 2000 by Rocco Caputo.  All rights are reserved.
+Poing is free software.  You may use, modify and/or distribute it
+under the same terms as Perl itself.
+
+The author may be reached as "Rocco Caputo" <troc+poing@netrus.net>.
+
+-------------------------------------------------------------------------------
+END OF FILE
+-------------------------------------------------------------------------------
+
+Thanks for reading!
