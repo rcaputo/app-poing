@@ -24,6 +24,14 @@ my $detect_host_life = 20;
 # You may write ups and downs to a log file.  It's off by default.
 my $log_filename = '';
 
+# For speech stuff.
+sub BEEP () { 1 }
+unless (BEEP) {
+  eval( "use POE::Component::Festival; " .
+        "POE::Component::Festival->start('synthesizer');"
+      );
+}
+
 #------------------------------------------------------------------------------
 # Helpful functions for displaying fractions.
 
@@ -77,7 +85,7 @@ sub _start {
 
   $heap->{pid}       = $$ & 0xffff;
   $heap->{seq}       = 0;
-  $heap->{data}      = '';
+  $heap->{data}      = '*';
   $heap->{data_size} = length($heap->{data});
 
   die "icmp ping requires root privilege" if ($> and $^O ne 'VMS');
@@ -88,6 +96,9 @@ sub _start {
   my $socket = gensym();
   socket($socket, PF_INET, SOCK_RAW, $protocol)
     or die "Can't create icmp socket: $!";
+
+  # Drop root.
+  $> = $<;
 
   $heap->{socket_handle} = $socket;
   $kernel->alias_set('pinger');
@@ -230,8 +241,8 @@ sub host_sort {
     }
     else {
       # host / host compare (may also be aliases)
-      return ( join('.', reverse(split(/\./, lc($a->[1])))) cmp
-               join('.', reverse(split(/\./, lc($b->[1]))))
+      return ( join('.', reverse(split(/[\.]/, lc($a->[1])))) cmp
+               join('.', reverse(split(/[\.]/, lc($b->[1]))))
              );
     }
   }
@@ -373,14 +384,31 @@ sub pong_sweep {
   }
 
   # Limit beeps to 2, please.  Ghargh!
-  if (@hosts_coming_up + @hosts_going_down > 1) {
-    print $display, "\a\a";
-  }
-  elsif (@hosts_coming_up + @hosts_going_down) {
-    print $display, "\a";
+  if (BEEP) {
+    if (@hosts_coming_up + @hosts_going_down > 1) {
+      print $display, "\a\a";
+    }
+    elsif (@hosts_coming_up + @hosts_going_down) {
+      print $display, "\a";
+    }
+    else {
+      print $display;
+    }
   }
   else {
     print $display;
+    foreach (@hosts_coming_up) {
+      $kernel->post( synthesizer =>
+                     evaluate =>
+                     qq{(SayText "$_->[HOST_NAME] up")}
+                   );
+    }
+    foreach (@hosts_going_down) {
+      $kernel->post( synthesizer =>
+                     evaluate =>
+                     qq{(SayText "$_->[HOST_NAME] down")}
+                   );
+    }
   }
 
   # If we're logging, log.
@@ -459,6 +487,10 @@ unless (open(HOME, "<$poing_rc_file")) {
 
 print "Loading and resolving configuration from $poing_rc_file ...\n";
 
+my $name_length = 0;
+my $group_length = 0;
+my $t_length = 0;
+
 while (<HOME>) {
   s/^\s+//;
   s/\s+$//;
@@ -482,12 +514,10 @@ while (<HOME>) {
     next if (exists $hosts_seen{$address});
     $hosts_seen{$address}++;
     my @name = gethostbyaddr($address, AF_INET);
-    if (@name) {
-      push @hosts_to_ping, [ $address, $name[0] ];
-    }
-    else {
-      push @hosts_to_ping, [ $address, inet_ntoa($address) ];
-    }
+
+    my $name = @name ? $name[0] : inet_ntoa($address);
+    push @hosts_to_ping, [ $address, $name ];
+    $name_length = length($name) if length($name) > $name_length;
     next;
   }
 
@@ -498,6 +528,7 @@ while (<HOME>) {
       next if (exists $hosts_seen{$address});
       $hosts_seen{$address}++;
       push @hosts_to_ping, [ $address, $1 ];
+      $t_length = length($1) if length($1) > $t_length;
     }
     else {
       warn "Cannot resolve host name from line $. of $poing_rc_file\n";
@@ -511,7 +542,16 @@ while (<HOME>) {
     if (defined $address) {
       next if (exists $hosts_seen{$address});
       $hosts_seen{$address}++;
-      push @hosts_to_ping, [ $address, $2 ];
+
+      my ($group, $name) = split m{/}, $2;
+      if ($name) {
+        $group_length = length($group) if length($group) > $group_length;
+        $name_length  = length($name)  if length($name)  > $name_length;
+      }
+      else {
+        $name_length = length($group)  if length($group) > $name_length;
+      }
+      push @hosts_to_ping, [ $address, $group, ($name ? $name : ()) ];
     }
     next;
   }
@@ -542,6 +582,21 @@ while (<HOME>) {
 }
 close HOME;
 close DATA;
+
+# Handle group names.
+
+for (@hosts_to_ping) {
+  if (@{$_} == 3) {
+    $_ = [ $_->[0],
+           sprintf( "\%-${group_length}s/\%-${name_length}s",
+                    @{$_}[1,2]
+                  )
+         ];
+  } else {
+    $_->[1] = sprintf( "\%${group_length}s %-${name_length}s", '', $_->[1] );
+  }
+  length $_->[1] < $t_length and $_->[1] = sprintf("\%${t_length}s", $_->[1]);
+}
 
 #------------------------------------------------------------------------------
 # Preprocess the detection times.

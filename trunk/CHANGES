@@ -4,6 +4,20 @@
 This file lists poing's changes, most recent to oldest.
 
 -------------------------------------------------------------------------------
+2000.06.?? - Release 1.02
+-------------------------------------------------------------------------------
+
+I discovered the snort network monitoring tool today.  I also
+discovered that snort sees ICMP echo requests without data as "large"
+ICMP packets.  Specifically, they trigger "IDS246 - MISC - Large ICMP
+Packet" alerts.  The work-around is to specify a single data byte,
+which this version now does.
+
+Magister submitted a patch to align host name/alias groups.  It's
+prettier, but it eats a lot of screen with whitespace.  Applied the
+patch anyway.
+
+-------------------------------------------------------------------------------
 2000.05.24 - Release 1.01
 -------------------------------------------------------------------------------
 
