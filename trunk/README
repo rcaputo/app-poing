@@ -229,6 +229,17 @@ icmp ping requires root privilege at [yatta-yatta] line [yatta-yatta].
   though; examine the program yourself for the utmost in warm-fuzzy
   security.
 
+Poing things my terminal width is 80 and/or its height is 25, but they
+really aren't.
+
+  Poing looks for COLS or COLUMNS to determine your terminal width;
+  and LINES or ROWS to determine its height.  Your shell may be
+  setting one pair of these variables, but they haven't been exported
+  to the environment.
+
+  Check your shell's manpage for the proper way to export the
+  variables it uses, so that Perl can see them and poing can use them.
+
 -------------------------------------------------------------------------------
 AUTHOR CONTACT AND COPYRIGHT
 -------------------------------------------------------------------------------
