@@ -17,6 +17,8 @@ Make a real manpage.
 A 'web front end would be sexy.  Refresh the page whenever you want to
 see the latest stats.
 
+POE now supports Perl/Tk.  A graphical interface would be sexy, too.
+
 -------------------------------------------------------------------------------
 End of File
 -------------------------------------------------------------------------------
