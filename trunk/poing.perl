@@ -427,6 +427,8 @@ sub pong_stop {
     print LOG "$now\tcease\n";
     close LOG;
   }
+
+  print "\e[0m";
 }
 
 sub pong_reply {
