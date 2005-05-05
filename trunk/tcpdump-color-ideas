@@ -1,0 +1,194 @@
+#!/usr/bin/perl
+
+# tcpdump packet correlator (slf@dreamscape.org)
+#  visualization aid to watch traffic flowing acrost your network.
+#   "I wonder how frequently I make my neighbors wireless light blink.."
+#
+# psuedo-math for 'blinky light over time'
+# 
+# 7:12pm   12211.6...1...1111.d115...1...o....1....1n...1...4.k.1.c11b.51.511C
+#             .'s indicate packets in the same second, letters and
+#                       numbers indicate time distance
+#          
+#  displays the delay between packets, 50 packets per line, counts bytes/increm.
+#   1)  ...'s are runs of traffic (each . is a packet) within the same second
+#   2)  1-9 represents 1 through 9 seconds that have transpired since the
+#       last packet. The 9 itself is like a ., but it was merely 9 seconds
+#       since we saw the last one.
+#   3)  a-z represent 10 through 35 seconds that have transpired since the
+#       last packet.
+#   4)  C represents that 35 to 40 seconds have transpired since the last pkt.
+#   5)  From there on out, D is 40-50 seconds, E is 50-60 seconds, F and so on
+#       each letter indicating a range of another 10 seconds, all the way on
+#       out to the letter Z which indicates that 260 seconds have transpired
+#       since the last pkt.
+
+$max=100;
+
+use Term::ANSIColor;
+
+$|=1; # autoflushing
+$device = shift or die "$0: tdpc by steven fountain\n$0: usage {device(required)} {specificly(optional)}\n$0: example: $0 eth0\n$0: example: $0 eth0 port 5000 and not arp and not udp\n";
+# $device = "en1";
+print "device: $device\n";
+$specificly = join ' ', @ARGV;
+$specificly = "" if ($specificly eq '');
+print "specificly: $specificly\n" if ($specificly ne '');
+
+## $specificly = "port 5000 and not arp and not udp";
+# $specificly = "not arp and not udp";
+
+$pchar = "."; # packets are flowing character
+$otime = " "; # intialize it to something so NEW!=OLD works w/no bs
+$oldsize = 0; # initializing the byte-counter & byte-incremental math
+
+$SIG{INT} = sub { die " <- ok, exiting.\n"; }; # control-C binding
+print "TDPC: 0=.'s  1..9=1..9  10..35=a..z  >35=C  >40=D  >50=E  >60=F  etc..\n";
+open TD, "tcpdump -n -i $device -s 2000 -l $specificly 2>/dev/null |" or die "cannot open tcpdump: $!\n";
+print "# packets: ";
+while(<TD>)
+{
+	if (defined $time)	{	$oldtime = $time;	}
+	$time = time;
+	if (defined $time && defined $oldtime)	{
+		$diff = $time - $oldtime;
+
+		whatchar();
+		# encode delay as printed character..
+		# : 0=.'s  1..9=1..9  10..35=a..z  >35=C  >40=D  >50=E  >60=F  etc..
+	}
+
+	$pnum++;
+	if ($pchar eq '.') { print color 'red'; }
+	if ($pchar ne '.') { print color 'bold yellow'; }
+	if ($lastpchar eq $pchar) { $prun++; }
+	if ($lastpchar ne $pchar) { $prun=0; }
+	
+	if	($prun > 49)  { print color 'bold red'; }
+	elsif ($prun > 99) { print color 'bold white'; }
+	print "$pchar"; # print coded character
+   print color 'reset';
+   $lastpchar = "$pchar";
+   
+	($size += $2) if (/(\((\d+)\)|: udp (\d+)$)/);
+	
+	if ($pnum eq $max) { $nsize = $size - $oldsize; print " (${size}b +${nsize}) ($pchars bursts $pop{$pchars})"; $oldsize = $size; }
+	
+	if ($pnum eq $max) {
+	   $pop{$pchars}++;
+	   $pchars=0;
+		print "\n"; 
+		$nclock = showtime();
+		print "# $nclock" if ($otime ne $nclock);
+		print "# " if ($otime eq $nclock);
+		print " " x 9 if ($otime eq $nclock);
+		$otime = $nclock;
+		$pnum=0;
+	}
+		
+	### $pchar = "." if ($pchar ne '.'); # normal printing character
+	if ($pchar ne '.' || $pchars eq '.')
+	{
+		$pchar = ".";
+		$pchars++;
+	}
+	# normal printing character
+	
+}
+close TD;
+print "Program finished..?\n";
+exit;
+
+# PACKETS:
+# 012345678
+sub showtime
+{
+	my ($date,$time1,$time2,$time,$hour,$min,$lclock,$clock,$pad);
+	open DATE, "date |";
+	$date = <DATE>;
+	close DATE;
+	chomp $date;
+	$time1 = $1 if ($date =~ /^.*?\s+.*?\s+.*?\s+(.*?)\s+.*?\s+\d+$/);
+	$time2 = $time1;
+	$time2 =~ s/://g;
+	$time = $1 if ($time2 =~ /^(\d\d\d\d)\d\d/);
+	$hour = $1 if ($time =~ /^(\d\d)\d\d/);
+	$min = $1 if ($time =~ /^\d\d(\d\d)/);
+	##print "date: $date\n";
+	##print "time: $time\n";
+	##print "time2: $time2\n";
+	##print "time1: $time1\n";
+	if ($hour > 12)
+		{ $extra = "pm"; $hour -= 12; }
+	else
+		{ 
+			if ($hour < 1)
+				{ $hour += 12; }
+			 $extra = "am";
+		 }
+
+	$clock = "$hour:${min}$extra";     
+	$lclock = length $clock;
+	$pad = 9 - $lclock;
+	$clock .= " " x $pad;
+	## print "clock: $clock\n";
+	## print "$clock";
+	return $clock;
+}
+
+sub whatchar
+{
+		if ($diff > 0 && $diff < 10)	{ $pchar = "$diff";	}
+		elsif ($diff eq '10')		{ $pchar = "a";		}
+		elsif ($diff eq '11')		{ $pchar = "b";		}
+		elsif ($diff eq '12')		{ $pchar = "c";		}
+		elsif ($diff eq '13')		{ $pchar = "d";		}
+		elsif ($diff eq '14')		{ $pchar = "e";		}
+		elsif ($diff eq '15')		{ $pchar = "f";		}
+		elsif ($diff eq '16')		{ $pchar = "g";		}
+		elsif ($diff eq '17')		{ $pchar = "h";		}
+		elsif ($diff eq '18')		{ $pchar = "i";		}
+		elsif ($diff eq '19')		{ $pchar = "j";		}
+		elsif ($diff eq '20')		{ $pchar = "k";		}
+		elsif ($diff eq '21')		{ $pchar = "l";		}
+		elsif ($diff eq '22')		{ $pchar = "m";		}
+		elsif ($diff eq '23')		{ $pchar = "n";		}
+		elsif ($diff eq '24')		{ $pchar = "o";		}
+		elsif ($diff eq '25')		{ $pchar = "p";		}
+		elsif ($diff eq '26')		{ $pchar = "q";		}
+		elsif ($diff eq '27')		{ $pchar = "r";		}
+		elsif ($diff eq '28')		{ $pchar = "s";		}
+		elsif ($diff eq '29')		{ $pchar = "t";		}
+		elsif ($diff eq '30')		{ $pchar = "u";		}
+		elsif ($diff eq '31')		{ $pchar = "v";		}
+		elsif ($diff eq '32')		{ $pchar = "w";		}
+		elsif ($diff eq '33')		{ $pchar = "x";		}
+		elsif ($diff eq '34')		{ $pchar = "y";		}
+		elsif ($diff eq '35')		{ $pchar = "z";		}
+		elsif ($diff > 35)		{ $pchar = "C";		}
+		elsif ($diff > 40)		{ $pchar = "D";		}
+		elsif ($diff > 50)		{ $pchar = "E";		}
+		elsif ($diff > 60)		{ $pchar = "F";		}
+		elsif ($diff > 70)		{ $pchar = "G";		}
+		elsif ($diff > 80)		{ $pchar = "H";		}
+		elsif ($diff > 90)		{ $pchar = "I";		}
+		elsif ($diff > 100)		{ $pchar = "J";		}
+		elsif ($diff > 110)		{ $pchar = "K";		}
+		elsif ($diff > 120)		{ $pchar = "L";		}
+		elsif ($diff > 130)		{ $pchar = "M";		}
+		elsif ($diff > 140)		{ $pchar = "N";		}
+		elsif ($diff > 150)		{ $pchar = "O";		}
+		elsif ($diff > 160)		{ $pchar = "P";		}
+		elsif ($diff > 170)		{ $pchar = "Q";		}
+		elsif ($diff > 180)		{ $pchar = "R";		}
+		elsif ($diff > 190)		{ $pchar = "S";		}
+		elsif ($diff > 200)		{ $pchar = "T";		}
+		elsif ($diff > 210)		{ $pchar = "U";		}
+		elsif ($diff > 220)		{ $pchar = "V";		}
+		elsif ($diff > 230)		{ $pchar = "W";		}
+		elsif ($diff > 240)		{ $pchar = "X";		}
+		elsif ($diff > 250)		{ $pchar = "Y";		}
+		elsif ($diff > 260)		{ $pchar = "Z";		}
+
+
+}
