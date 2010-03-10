@@ -1,7 +1,8 @@
 #!/usr/bin/perl -w
-# $Id$
 
 # Whole huge chunks of poing.perl have been "adapted" from Net::Ping.
+# And later, they were abstracted into POE::Component::Client::Ping.
+# TODO - Use the component!
 
 use strict;
 use lib '../poe';

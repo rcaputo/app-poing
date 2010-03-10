@@ -1,5 +1,4 @@
 # -*- mode: text; tab-stop-list: (2 4 6 8 10); indent-tabs-mode: t -*-
-# $Id$
 
 -------------------------------------------------------------------------------
 TABLE OF CONTENTS
@@ -244,11 +243,11 @@ really aren't.
 AUTHOR CONTACT AND COPYRIGHT
 -------------------------------------------------------------------------------
 
-Poing is Copyright 2000 by Rocco Caputo.  All rights are reserved.
+Poing is Copyright 2000-2010 by Rocco Caputo.  All rights are reserved.
 Poing is free software.  You may use, modify and/or distribute it
 under the same terms as Perl itself.
 
-The author may be reached as "Rocco Caputo" <rcaputo@cpan.org>.
+The author may be reached as "Rocco Caputo" <rcaputo+poing@cpan.org>.
 
 -------------------------------------------------------------------------------
 END OF FILE

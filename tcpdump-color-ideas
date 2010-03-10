@@ -189,6 +189,4 @@ sub whatchar
 		elsif ($diff > 240)		{ $pchar = "X";		}
 		elsif ($diff > 250)		{ $pchar = "Y";		}
 		elsif ($diff > 260)		{ $pchar = "Z";		}
-
-
 }
